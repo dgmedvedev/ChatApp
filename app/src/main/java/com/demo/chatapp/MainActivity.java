@@ -6,7 +6,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -14,6 +17,7 @@ import android.widget.Toast;
 import com.demo.chatapp.adapters.MessagesAdapter;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -25,6 +29,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private FirebaseFirestore db;
+    private FirebaseAuth mAuth;
 
     private RecyclerView recyclerViewMessages;
     private MessagesAdapter adapter;
@@ -34,10 +39,26 @@ public class MainActivity extends AppCompatActivity {
     private String author;
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.itemSignOut) {
+            mAuth.signOut();
+            signOut();
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         editTextMessage = findViewById(R.id.editTextMessage);
         imageViewSendMessage = findViewById(R.id.imageViewSendMessage);
@@ -60,6 +81,14 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        if (mAuth.getCurrentUser() != null) {
+            Toast.makeText(this, "Logged", Toast.LENGTH_SHORT).show();
+        } else {
+            signOut();
+        }
+
+
     }
 
     private void sendMessage() {
@@ -79,5 +108,10 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
         }
+    }
+
+    private void signOut() {
+        Intent intent = new Intent(this, RegisterActivity.class);
+        startActivity(intent);
     }
 }
