@@ -11,8 +11,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
@@ -24,6 +26,7 @@ import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract;
 import com.firebase.ui.auth.IdpResponse;
 import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult;
+import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -35,6 +38,9 @@ import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import java.util.Arrays;
 import java.util.List;
@@ -53,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
 
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
+    private FirebaseStorage storage; // создаем экземпляр FirebaseStorage (хранилище файлов)
+    private StorageReference reference; // создаем ссылку для добавления/удаления файлов
 
     private RecyclerView recyclerViewMessages;
     private MessagesAdapter adapter;
@@ -60,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageViewSendMessage;
     private ImageView imageViewAddImage;
 
-    private String author;
+    private SharedPreferences preferences;
 
     @Override
     protected void onResume() {
@@ -72,7 +80,6 @@ public class MainActivity extends AppCompatActivity {
                 if (value != null) {
                     List<Message> messages = value.toObjects(Message.class);
                     adapter.setMessages(messages);
-                    recyclerViewMessages.scrollToPosition(adapter.getItemCount() - 1);
                 }
             }
         });
@@ -97,25 +104,32 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
+        storage = FirebaseStorage.getInstance();
+        reference = storage.getReference();
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         editTextMessage = findViewById(R.id.editTextMessage);
         imageViewSendMessage = findViewById(R.id.imageViewSendMessage);
         imageViewAddImage = findViewById(R.id.imageViewAddImage);
-        adapter = new MessagesAdapter();
+        adapter = new MessagesAdapter(this);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewMessages.setAdapter(adapter);
-        author = "Дмитрий";
 
         if (mAuth.getCurrentUser() != null) {
-            Toast.makeText(this, "Logged", Toast.LENGTH_SHORT).show();
+            String author = mAuth.getCurrentUser().getEmail();
+            preferences.edit().putString("author", author).apply();
+            Toast.makeText(this, "Добро пожаловать " + author, Toast.LENGTH_SHORT).show();
         } else {
             signOut();
         }
 
         imageViewSendMessage.setOnClickListener(view -> {
-            sendMessage();
+            String textOfMessage = editTextMessage.getText().toString().trim();
+            if (!textOfMessage.isEmpty()) {
+                sendMessage(textOfMessage, null);
+            }
         });
 
         imageViewAddImage.setOnClickListener(view -> {
@@ -126,14 +140,21 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void sendMessage() {
-        String textOfMessage = editTextMessage.getText().toString().trim();
-        if (!textOfMessage.isEmpty()) {
-            db.collection(COLLECTION_NAME).add(new Message(author, textOfMessage, System.currentTimeMillis()))
+    private void sendMessage(String textOfMessage, String urlToImage) {
+        Message message = null;
+        String author = preferences.getString("author", "Anonym");
+        if (textOfMessage != null && !textOfMessage.isEmpty()) {
+            message = new Message(author, textOfMessage, System.currentTimeMillis(), null);
+        } else if (urlToImage != null && !urlToImage.isEmpty()) {
+            message = new Message(author, null, System.currentTimeMillis(), urlToImage);
+        }
+        if (message != null) {
+            db.collection(COLLECTION_NAME).add(message)
                     .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
                         @Override
                         public void onSuccess(DocumentReference documentReference) {
                             editTextMessage.setText("");
+                            recyclerViewMessages.scrollToPosition(adapter.getItemCount() - 1);
                         }
                     })
                     .addOnFailureListener(new OnFailureListener() {
@@ -175,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if (user != null) {
                 Toast.makeText(MainActivity.this, user.getEmail(), Toast.LENGTH_SHORT).show();
-                author = user.getEmail();
+                preferences.edit().putString("author", user.getEmail()).apply();
             }
         } else {
             if (response != null) {
@@ -190,8 +211,32 @@ public class MainActivity extends AppCompatActivity {
         if (result.getResultCode() == RESULT_OK) {
             Intent data = result.getData();
             if (data != null) {
-                Uri uri = data.getData();
-                Toast.makeText(MainActivity.this, uri.toString(), Toast.LENGTH_SHORT).show();
+                Uri uri = data.getData(); // Получаем uri из Галереи
+                if (uri != null) {
+                    final StorageReference referenceToImage = reference.child("images/" + uri.getLastPathSegment());
+                    referenceToImage.putFile(uri)
+                            .continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
+                                @Override
+                                public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
+                                    if (!task.isSuccessful()) {
+                                        throw task.getException();
+                                    }
+                                    return referenceToImage.getDownloadUrl();
+                                }
+                            }).addOnCompleteListener(new OnCompleteListener<Uri>() {
+                                @Override
+                                public void onComplete(@NonNull Task<Uri> task) {
+                                    if (task.isSuccessful()) {
+                                        Uri downloadUri = task.getResult();
+                                        if (downloadUri != null) {
+                                            sendMessage(null, downloadUri.toString());
+                                        }
+                                    } else {
+                                        Toast.makeText(MainActivity.this, "Error", Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+                            });
+                }
             }
         } else {
             Toast.makeText(MainActivity.this, "Error getImageResult", Toast.LENGTH_SHORT).show();
