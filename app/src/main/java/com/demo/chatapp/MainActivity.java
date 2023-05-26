@@ -44,6 +44,7 @@ import com.google.firebase.storage.UploadTask;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -68,12 +69,14 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageViewSendMessage;
     private ImageView imageViewAddImage;
 
+    private Toast toastMessage;
+    private boolean isAuth;
+
     private SharedPreferences preferences;
 
     @Override
     protected void onResume() {
         super.onResume();
-        swipe();
         db.collection(COLLECTION_NAME).orderBy("date").addSnapshotListener(new EventListener<QuerySnapshot>() {
             @Override
             public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
@@ -118,12 +121,14 @@ public class MainActivity extends AppCompatActivity {
         recyclerViewMessages.setAdapter(adapter);
 
         if (mAuth.getCurrentUser() != null) {
+            isAuth = true;
             String author = mAuth.getCurrentUser().getEmail();
             preferences.edit().putString("author", author).apply();
-            Toast.makeText(this, "Добро пожаловать " + author, Toast.LENGTH_SHORT).show();
         } else {
             signOut();
         }
+
+        swipe();
 
         imageViewSendMessage.setOnClickListener(view -> {
             String textOfMessage = editTextMessage.getText().toString().trim();
@@ -160,13 +165,14 @@ public class MainActivity extends AppCompatActivity {
                     .addOnFailureListener(new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception e) {
-                            Toast.makeText(MainActivity.this, "Сообщение не отправлено", Toast.LENGTH_SHORT).show();
+                            showToastMessage("Сообщение не отправлено");
                         }
                     });
         }
     }
 
     private void signOut() {
+        isAuth = false;
         AuthUI.getInstance()
                 .signOut(this)
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
@@ -183,26 +189,21 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-    }
-
     private void onSignInResult(FirebaseAuthUIAuthenticationResult result) {
         IdpResponse response = result.getIdpResponse();
         if (result.getResultCode() == RESULT_OK) {
             // Successfully signed in
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if (user != null) {
-                Toast.makeText(MainActivity.this, user.getEmail(), Toast.LENGTH_SHORT).show();
+                showToastMessage("Добро пожаловать " + user.getEmail());
                 preferences.edit().putString("author", user.getEmail()).apply();
+                isAuth = true;
             }
         } else {
             if (response != null) {
-                Toast.makeText(MainActivity.this, "Error: " + response.getError(), Toast.LENGTH_SHORT).show();
+                showToastMessage("Error: " + response.getError());
             } else {
-                Toast.makeText(MainActivity.this, "Error", Toast.LENGTH_SHORT).show();
+                showToastMessage("Error");
             }
         }
     }
@@ -232,14 +233,14 @@ public class MainActivity extends AppCompatActivity {
                                             sendMessage(null, downloadUri.toString());
                                         }
                                     } else {
-                                        Toast.makeText(MainActivity.this, "Error", Toast.LENGTH_SHORT).show();
+                                        showToastMessage("Error");
                                     }
                                 }
                             });
                 }
             }
         } else {
-            Toast.makeText(MainActivity.this, "Error getImageResult", Toast.LENGTH_SHORT).show();
+            showToastMessage("Error getImageResult");
         }
     }
 
@@ -254,21 +255,41 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-                db.collection(COLLECTION_NAME).orderBy("date").get()
-                        .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                            @Override
-                            public void onSuccess(QuerySnapshot querySnapshots) {
-                                for (int i = 0; i < querySnapshots.getDocuments().size(); i++) {
-                                    if (i == viewHolder.getAdapterPosition()) {
-                                        String messageId = querySnapshots.getDocuments().get(i).getId();
-                                        db.collection(COLLECTION_NAME).document(messageId).delete();
-                                        return;
+
+                if (isAuth) {
+                    db.collection(COLLECTION_NAME).orderBy("date").get()
+                            .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                @Override
+                                public void onSuccess(QuerySnapshot querySnapshots) {
+                                    for (int i = 0; i < querySnapshots.getDocuments().size(); i++) {
+                                        if (i == viewHolder.getAdapterPosition()) {
+                                            String messageId = querySnapshots.getDocuments().get(i).getId();
+                                            String author = querySnapshots.getDocuments().get(i).getString("author");
+                                            String thisAuthor = Objects.requireNonNull(mAuth.getCurrentUser()).getEmail();
+                                            if (author != null && author.equals(thisAuthor)) {
+                                                db.collection(COLLECTION_NAME).document(messageId).delete();
+                                            } else {
+                                                showToastMessage("Удаляйте только свои сообщения");
+                                            }
+                                            return;
+                                        }
                                     }
                                 }
-                            }
-                        });
+                            });
+                } else {
+                    showToastMessage("Авторизуйтесь");
+                }
             }
         });
         itemTouchHelper.attachToRecyclerView(recyclerViewMessages);
+    }
+
+    private void showToastMessage(String textToastMessage) {
+        if (toastMessage != null) {
+            toastMessage.cancel();
+        }
+        toastMessage = Toast.makeText(MainActivity.this, textToastMessage, Toast.LENGTH_SHORT);
+        toastMessage.show();
+        adapter.notifyDataSetChanged();
     }
 }

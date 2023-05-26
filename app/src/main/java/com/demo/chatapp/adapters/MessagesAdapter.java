@@ -71,10 +71,12 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
         String urlToImage = message.getImageUrl();
         holder.textViewAuthor.setText(author);
         if (textOfMessage != null && !textOfMessage.isEmpty()) {
+            holder.textViewTextOfMessage.setVisibility(View.VISIBLE);
             holder.textViewTextOfMessage.setText(textOfMessage);
             holder.imageViewImage.setVisibility(View.GONE);
         }
         if (urlToImage != null && !urlToImage.isEmpty()) {
+            holder.textViewTextOfMessage.setVisibility(View.GONE);
             holder.imageViewImage.setVisibility(View.VISIBLE);
             Picasso.get().load(urlToImage).into(holder.imageViewImage);
         }
