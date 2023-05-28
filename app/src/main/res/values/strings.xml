@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Chat App</string>
     <string name="sign_out">Выйти</string>
+    <string name="sign_in">Войти</string>
 </resources>

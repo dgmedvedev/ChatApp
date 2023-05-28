@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -72,31 +73,49 @@ public class MainActivity extends AppCompatActivity {
     private Toast toastMessage;
     private boolean isAuth;
 
+    private Menu optionsMenu;
+
     private SharedPreferences preferences;
 
     @Override
     protected void onResume() {
         super.onResume();
-        db.collection(COLLECTION_NAME).orderBy("date").addSnapshotListener(new EventListener<QuerySnapshot>() {
-            @Override
-            public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
-                if (value != null) {
-                    List<Message> messages = value.toObjects(Message.class);
-                    adapter.setMessages(messages);
+        if (isAuth) {
+            db.collection(COLLECTION_NAME).orderBy("date").addSnapshotListener(new EventListener<QuerySnapshot>() {
+                @Override
+                public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
+                    if (value != null) {
+                        List<Message> messages = value.toObjects(Message.class);
+                        adapter.setMessages(messages);
+                        recyclerViewMessages.scrollToPosition(adapter.getItemCount() - 1);
+                    }
                 }
-            }
-        });
+            });
+        }
+        if (optionsMenu != null) {
+            onCreateOptionsMenu(optionsMenu);
+        }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu, menu);
+        optionsMenu = menu;
+        menu.clear();
+        if (isAuth) {
+            getMenuInflater().inflate(R.menu.main_menu, menu);
+        } else {
+            getMenuInflater().inflate(R.menu.main_menu_sign_in, menu);
+        }
         return super.onCreateOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.itemSignOut) {
+            mAuth.signOut();
+            signOut();
+        }
+        if (item.getItemId() == R.id.itemSignIn) {
             mAuth.signOut();
             signOut();
         }
@@ -131,17 +150,33 @@ public class MainActivity extends AppCompatActivity {
         swipe();
 
         imageViewSendMessage.setOnClickListener(view -> {
-            String textOfMessage = editTextMessage.getText().toString().trim();
-            if (!textOfMessage.isEmpty()) {
-                sendMessage(textOfMessage, null);
+            if (isAuth) {
+                String textOfMessage = editTextMessage.getText().toString().trim();
+                if (isNetworkConnected()) {
+                    if (!textOfMessage.isEmpty()) {
+                        sendMessage(textOfMessage, null);
+                    }
+                } else {
+                    showToastMessage("Проверьте подключение к интернету");
+                }
+            } else {
+                showToastMessage("Авторизуйтесь");
             }
         });
 
         imageViewAddImage.setOnClickListener(view -> {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT); // получаем контент
-            intent.setType("image/jpeg"); // указываем какой именно контент необходимо получить
-            intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true); // контент только с локального хранилища
-            getImageLauncher.launch(intent);
+            if (isAuth) {
+                if (isNetworkConnected()) {
+                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT); // получаем контент
+                    intent.setType("image/jpeg"); // указываем какой именно контент необходимо получить
+                    intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true); // контент только с локального хранилища
+                    getImageLauncher.launch(intent);
+                } else {
+                    showToastMessage("Проверьте подключение к интернету");
+                }
+            } else {
+                showToastMessage("Авторизуйтесь");
+            }
         });
     }
 
@@ -165,6 +200,7 @@ public class MainActivity extends AppCompatActivity {
                     .addOnFailureListener(new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception e) {
+                            editTextMessage.setText("");
                             showToastMessage("Сообщение не отправлено");
                         }
                     });
@@ -187,6 +223,7 @@ public class MainActivity extends AppCompatActivity {
                         signInLauncher.launch(signInIntent);
                     }
                 });
+        adapter.clearMessages();
     }
 
     private void onSignInResult(FirebaseAuthUIAuthenticationResult result) {
@@ -203,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
             if (response != null) {
                 showToastMessage("Error: " + response.getError());
             } else {
-                showToastMessage("Error");
+                showToastMessage("Авторизуйтесь");
             }
         }
     }
@@ -233,14 +270,14 @@ public class MainActivity extends AppCompatActivity {
                                             sendMessage(null, downloadUri.toString());
                                         }
                                     } else {
-                                        showToastMessage("Error");
+                                        showToastMessage("Error getImageResult");
                                     }
                                 }
                             });
                 }
             }
         } else {
-            showToastMessage("Error getImageResult");
+            showToastMessage("Изображение не выбрано");
         }
     }
 
@@ -291,5 +328,10 @@ public class MainActivity extends AppCompatActivity {
         toastMessage = Toast.makeText(MainActivity.this, textToastMessage, Toast.LENGTH_SHORT);
         toastMessage.show();
         adapter.notifyDataSetChanged();
+    }
+
+    private boolean isNetworkConnected() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        return cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isConnected();
     }
 }

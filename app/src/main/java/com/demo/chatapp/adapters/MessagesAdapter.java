@@ -31,6 +31,12 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
         this.context = context;
     }
 
+    public void clearMessages() {
+        if (messages != null) {
+            messages.clear();
+        }
+    }
+
     public List<Message> getMessages() {
         return messages;
     }
