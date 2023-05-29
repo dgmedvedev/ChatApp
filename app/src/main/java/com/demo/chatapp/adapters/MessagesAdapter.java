@@ -25,6 +25,13 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
 
     private List<Message> messages;
     private Context context;
+    private OnMessageClickListener onMessageClickListener;
+
+    public interface OnMessageClickListener {
+        void onMessageClick(View view, int position);
+
+        void onMessageLongClick(View view, int position);
+    }
 
     public MessagesAdapter(Context context) {
         this.messages = new ArrayList<>();
@@ -35,6 +42,10 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
         if (messages != null) {
             messages.clear();
         }
+    }
+
+    public void setOnMessageClickListener(OnMessageClickListener onMessageClickListener) {
+        this.onMessageClickListener = onMessageClickListener;
     }
 
     public List<Message> getMessages() {
@@ -103,6 +114,17 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
             textViewAuthor = itemView.findViewById(R.id.textViewAuthor);
             textViewTextOfMessage = itemView.findViewById(R.id.textViewTextOfMessage);
             imageViewImage = itemView.findViewById(R.id.imageViewImage);
+            itemView.setOnClickListener(view -> {
+                if (onMessageClickListener != null) {
+                    onMessageClickListener.onMessageClick(view, getAdapterPosition());
+                }
+            });
+            itemView.setOnLongClickListener(view -> {
+                if (onMessageClickListener != null) {
+                    onMessageClickListener.onMessageLongClick(view, getAdapterPosition());
+                }
+                return true;
+            });
         }
     }
 }

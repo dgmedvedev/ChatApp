@@ -18,8 +18,10 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.Toast;
 
 import com.demo.chatapp.adapters.MessagesAdapter;
@@ -122,6 +124,48 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    private void showPopapMenu(View view, int position) {
+        PopupMenu popupMenu = new PopupMenu(this, view);
+        popupMenu.inflate(R.menu.popupmenu);
+        popupMenu
+                .setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                    @Override
+                    public boolean onMenuItemClick(MenuItem item) {
+                        switch (item.getItemId()) {
+                            case R.id.itemShare:
+                                Message message = adapter.getMessages().get(position);
+                                if (message != null) {
+                                    String imageUrl = message.getImageUrl();
+                                    String textOfMessage = message.getTextOfMessage();
+                                    String result;
+                                    if (imageUrl != null) {
+                                        result = imageUrl;
+                                    } else {
+                                        result = textOfMessage;
+                                    }
+                                    Intent intent = new Intent(Intent.ACTION_SEND);
+                                    intent.setType("text/plain");
+                                    intent.putExtra(Intent.EXTRA_TEXT, result);
+                                    startActivity(intent);
+                                    return true;
+                                }
+                            case R.id.itemDelete:
+                                deleteMessage(position);
+                                return true;
+                            default:
+                                return false;
+                        }
+                    }
+                });
+
+        popupMenu.setOnDismissListener(new PopupMenu.OnDismissListener() {
+            @Override
+            public void onDismiss(PopupMenu menu) {
+            }
+        });
+        popupMenu.show();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -148,6 +192,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         swipe();
+
+        adapter.setOnMessageClickListener(new MessagesAdapter.OnMessageClickListener() {
+            @Override
+            public void onMessageClick(View view, int position) {
+            }
+
+            @Override
+            public void onMessageLongClick(View view, int position) {
+                showPopapMenu(view, position);
+            }
+        });
 
         imageViewSendMessage.setOnClickListener(view -> {
             if (isAuth) {
@@ -294,31 +349,35 @@ public class MainActivity extends AppCompatActivity {
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
 
                 if (isAuth) {
-                    db.collection(COLLECTION_NAME).orderBy("date").get()
-                            .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                                @Override
-                                public void onSuccess(QuerySnapshot querySnapshots) {
-                                    for (int i = 0; i < querySnapshots.getDocuments().size(); i++) {
-                                        if (i == viewHolder.getAdapterPosition()) {
-                                            String messageId = querySnapshots.getDocuments().get(i).getId();
-                                            String author = querySnapshots.getDocuments().get(i).getString("author");
-                                            String thisAuthor = Objects.requireNonNull(mAuth.getCurrentUser()).getEmail();
-                                            if (author != null && author.equals(thisAuthor)) {
-                                                db.collection(COLLECTION_NAME).document(messageId).delete();
-                                            } else {
-                                                showToastMessage("Удаляйте только свои сообщения");
-                                            }
-                                            return;
-                                        }
-                                    }
-                                }
-                            });
+                    deleteMessage(viewHolder.getAdapterPosition());
                 } else {
                     showToastMessage("Авторизуйтесь");
                 }
             }
         });
         itemTouchHelper.attachToRecyclerView(recyclerViewMessages);
+    }
+
+    private void deleteMessage(int position) {
+        db.collection(COLLECTION_NAME).orderBy("date").get()
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override
+                    public void onSuccess(QuerySnapshot querySnapshots) {
+                        for (int i = 0; i < querySnapshots.getDocuments().size(); i++) {
+                            if (i == position) {
+                                String messageId = querySnapshots.getDocuments().get(i).getId();
+                                String author = querySnapshots.getDocuments().get(i).getString("author");
+                                String thisAuthor = Objects.requireNonNull(mAuth.getCurrentUser()).getEmail();
+                                if (author != null && author.equals(thisAuthor)) {
+                                    db.collection(COLLECTION_NAME).document(messageId).delete();
+                                } else {
+                                    showToastMessage("Удаляйте только свои сообщения");
+                                }
+                                return;
+                            }
+                        }
+                    }
+                });
     }
 
     private void showToastMessage(String textToastMessage) {
