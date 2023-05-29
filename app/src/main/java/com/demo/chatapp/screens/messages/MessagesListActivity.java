@@ -1,4 +1,4 @@
-package com.demo.chatapp;
+package com.demo.chatapp.screens.messages;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
@@ -6,7 +6,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -18,24 +17,20 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.PopupMenu;
 import android.widget.Toast;
 
+import com.demo.chatapp.pojo.Message;
+import com.demo.chatapp.R;
 import com.demo.chatapp.adapters.MessagesAdapter;
-import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract;
-import com.firebase.ui.auth.IdpResponse;
-import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult;
 import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -45,15 +40,19 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
-public class MainActivity extends AppCompatActivity {
+public class MessagesListActivity extends AppCompatActivity implements MessagesListView {
+
+    private MessagesListPresenter presenter;
+
+    private SharedPreferences preferences;
 
     private final ActivityResultLauncher<Intent> signInLauncher = registerForActivityResult(
             new FirebaseAuthUIActivityResultContract(),
-            this::onSignInResult);
+            result -> {
+                presenter.onSignInResult(result, preferences);
+            });
 
     private final ActivityResultLauncher<Intent> getImageLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -73,16 +72,14 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageViewAddImage;
 
     private Toast toastMessage;
-    private boolean isAuth;
 
     private Menu optionsMenu;
 
-    private SharedPreferences preferences;
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (isAuth) {
+        if (presenter.isAuth) {
             db.collection(COLLECTION_NAME).orderBy("date").addSnapshotListener(new EventListener<QuerySnapshot>() {
                 @Override
                 public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
@@ -103,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         optionsMenu = menu;
         menu.clear();
-        if (isAuth) {
+        if (presenter.isAuth) {
             getMenuInflater().inflate(R.menu.main_menu, menu);
         } else {
             getMenuInflater().inflate(R.menu.main_menu_sign_in, menu);
@@ -115,61 +112,20 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.itemSignOut) {
             mAuth.signOut();
-            signOut();
+            presenter.signOut(signInLauncher, adapter);
         }
         if (item.getItemId() == R.id.itemSignIn) {
             mAuth.signOut();
-            signOut();
+            presenter.signOut(signInLauncher, adapter);
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private void showPopapMenu(View view, int position) {
-        PopupMenu popupMenu = new PopupMenu(this, view);
-        popupMenu.inflate(R.menu.popupmenu);
-        popupMenu
-                .setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                    @Override
-                    public boolean onMenuItemClick(MenuItem item) {
-                        switch (item.getItemId()) {
-                            case R.id.itemShare:
-                                Message message = adapter.getMessages().get(position);
-                                if (message != null) {
-                                    String imageUrl = message.getImageUrl();
-                                    String textOfMessage = message.getTextOfMessage();
-                                    String result;
-                                    if (imageUrl != null) {
-                                        result = imageUrl;
-                                    } else {
-                                        result = textOfMessage;
-                                    }
-                                    Intent intent = new Intent(Intent.ACTION_SEND);
-                                    intent.setType("text/plain");
-                                    intent.putExtra(Intent.EXTRA_TEXT, result);
-                                    startActivity(intent);
-                                    return true;
-                                }
-                            case R.id.itemDelete:
-                                deleteMessage(position);
-                                return true;
-                            default:
-                                return false;
-                        }
-                    }
-                });
-
-        popupMenu.setOnDismissListener(new PopupMenu.OnDismissListener() {
-            @Override
-            public void onDismiss(PopupMenu menu) {
-            }
-        });
-        popupMenu.show();
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        presenter = new MessagesListPresenter(this, this);
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
@@ -179,33 +135,22 @@ public class MainActivity extends AppCompatActivity {
         editTextMessage = findViewById(R.id.editTextMessage);
         imageViewSendMessage = findViewById(R.id.imageViewSendMessage);
         imageViewAddImage = findViewById(R.id.imageViewAddImage);
-        adapter = new MessagesAdapter(this);
+        adapter = new MessagesAdapter(this, presenter);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewMessages.setAdapter(adapter);
 
         if (mAuth.getCurrentUser() != null) {
-            isAuth = true;
+            presenter.isAuth = true;
             String author = mAuth.getCurrentUser().getEmail();
             preferences.edit().putString("author", author).apply();
         } else {
-            signOut();
+            presenter.signOut(signInLauncher, adapter);
         }
 
-        swipe();
-
-        adapter.setOnMessageClickListener(new MessagesAdapter.OnMessageClickListener() {
-            @Override
-            public void onMessageClick(View view, int position) {
-            }
-
-            @Override
-            public void onMessageLongClick(View view, int position) {
-                showPopapMenu(view, position);
-            }
-        });
+        presenter.swipe(recyclerViewMessages);
 
         imageViewSendMessage.setOnClickListener(view -> {
-            if (isAuth) {
+            if (presenter.isAuth) {
                 String textOfMessage = editTextMessage.getText().toString().trim();
                 if (isNetworkConnected()) {
                     if (!textOfMessage.isEmpty()) {
@@ -220,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         imageViewAddImage.setOnClickListener(view -> {
-            if (isAuth) {
+            if (presenter.isAuth) {
                 if (isNetworkConnected()) {
                     Intent intent = new Intent(Intent.ACTION_GET_CONTENT); // получаем контент
                     intent.setType("image/jpeg"); // указываем какой именно контент необходимо получить
@@ -262,44 +207,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void signOut() {
-        isAuth = false;
-        AuthUI.getInstance()
-                .signOut(this)
-                .addOnCompleteListener(new OnCompleteListener<Void>() {
-                    public void onComplete(@NonNull Task<Void> task) {
-                        List<AuthUI.IdpConfig> providers = Arrays.asList(
-                                new AuthUI.IdpConfig.EmailBuilder().build(),
-                                new AuthUI.IdpConfig.GoogleBuilder().build());
-                        Intent signInIntent = AuthUI.getInstance()
-                                .createSignInIntentBuilder()
-                                .setAvailableProviders(providers)
-                                .build();
-                        signInLauncher.launch(signInIntent);
-                    }
-                });
-        adapter.clearMessages();
-    }
-
-    private void onSignInResult(FirebaseAuthUIAuthenticationResult result) {
-        IdpResponse response = result.getIdpResponse();
-        if (result.getResultCode() == RESULT_OK) {
-            // Successfully signed in
-            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-            if (user != null) {
-                showToastMessage("Добро пожаловать " + user.getEmail());
-                preferences.edit().putString("author", user.getEmail()).apply();
-                isAuth = true;
-            }
-        } else {
-            if (response != null) {
-                showToastMessage("Error: " + response.getError());
-            } else {
-                showToastMessage("Авторизуйтесь");
-            }
-        }
-    }
-
     private void getImageResult(ActivityResult result) {
         if (result.getResultCode() == RESULT_OK) {
             Intent data = result.getData();
@@ -336,55 +243,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void swipe() {
-        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {
-            @Override
-            public boolean onMove(@NonNull RecyclerView recyclerView,
-                                  @NonNull RecyclerView.ViewHolder viewHolder,
-                                  @NonNull RecyclerView.ViewHolder target) {
-                return false;
-            }
-
-            @Override
-            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-
-                if (isAuth) {
-                    deleteMessage(viewHolder.getAdapterPosition());
-                } else {
-                    showToastMessage("Авторизуйтесь");
-                }
-            }
-        });
-        itemTouchHelper.attachToRecyclerView(recyclerViewMessages);
-    }
-
-    private void deleteMessage(int position) {
-        db.collection(COLLECTION_NAME).orderBy("date").get()
-                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                    @Override
-                    public void onSuccess(QuerySnapshot querySnapshots) {
-                        for (int i = 0; i < querySnapshots.getDocuments().size(); i++) {
-                            if (i == position) {
-                                String messageId = querySnapshots.getDocuments().get(i).getId();
-                                String author = querySnapshots.getDocuments().get(i).getString("author");
-                                String thisAuthor = Objects.requireNonNull(mAuth.getCurrentUser()).getEmail();
-                                if (author != null && author.equals(thisAuthor)) {
-                                    db.collection(COLLECTION_NAME).document(messageId).delete();
-                                } else {
-                                    showToastMessage("Удаляйте только свои сообщения");
-                                }
-                                return;
-                            }
-                        }
-                    }
-                });
-    }
-
-    private void showToastMessage(String textToastMessage) {
+    @Override
+    public void showToastMessage(String textToastMessage) {
         if (toastMessage != null) {
             toastMessage.cancel();
         }
-        toastMessage = Toast.makeText(MainActivity.this, textToastMessage, Toast.LENGTH_SHORT);
+        toastMessage = Toast.makeText(MessagesListActivity.this, textToastMessage, Toast.LENGTH_SHORT);
         toastMessage.show();
         adapter.notifyDataSetChanged();
     }

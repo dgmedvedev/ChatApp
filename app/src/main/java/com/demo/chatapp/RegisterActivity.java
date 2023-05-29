@@ -1,6 +1,5 @@
 package com.demo.chatapp;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
@@ -10,6 +9,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.demo.chatapp.screens.messages.MessagesListActivity;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class RegisterActivity extends AppCompatActivity {
@@ -40,7 +40,7 @@ public class RegisterActivity extends AppCompatActivity {
             mAuth.createUserWithEmailAndPassword(email, password)
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
-                            Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
+                            Intent intent = new Intent(RegisterActivity.this, MessagesListActivity.class);
                             startActivity(intent);
                         } else {
                             Toast.makeText(RegisterActivity.this, "Ошибка: " + task.getException(), Toast.LENGTH_SHORT).show();

@@ -1,18 +1,22 @@
 package com.demo.chatapp.adapters;
 
 import android.content.Context;
+import android.content.Intent;
 import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.demo.chatapp.Message;
+import com.demo.chatapp.pojo.Message;
 import com.demo.chatapp.R;
+import com.demo.chatapp.screens.messages.MessagesListPresenter;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
@@ -26,6 +30,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     private List<Message> messages;
     private Context context;
     private OnMessageClickListener onMessageClickListener;
+    private MessagesListPresenter presenter;
 
     public interface OnMessageClickListener {
         void onMessageClick(View view, int position);
@@ -33,9 +38,10 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
         void onMessageLongClick(View view, int position);
     }
 
-    public MessagesAdapter(Context context) {
+    public MessagesAdapter(Context context, MessagesListPresenter presenter) {
         this.messages = new ArrayList<>();
         this.context = context;
+        this.presenter = presenter;
     }
 
     public void clearMessages() {
@@ -123,6 +129,45 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
                 if (onMessageClickListener != null) {
                     onMessageClickListener.onMessageLongClick(view, getAdapterPosition());
                 }
+                PopupMenu popupMenu = new PopupMenu(itemView.getContext(), itemView);
+                popupMenu.inflate(R.menu.popupmenu);
+                popupMenu
+                        .setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                            @Override
+                            public boolean onMenuItemClick(MenuItem item) {
+                                switch (item.getItemId()) {
+                                    case R.id.itemShare:
+                                        Message message = messages.get(getAdapterPosition());
+                                        if (message != null) {
+                                            String imageUrl = message.getImageUrl();
+                                            String textOfMessage = message.getTextOfMessage();
+                                            String result;
+                                            if (imageUrl != null) {
+                                                result = imageUrl;
+                                            } else {
+                                                result = textOfMessage;
+                                            }
+                                            Intent intent = new Intent(Intent.ACTION_SEND);
+                                            intent.setType("text/plain");
+                                            intent.putExtra(Intent.EXTRA_TEXT, result);
+                                            context.startActivity(intent);
+                                            return true;
+                                        }
+                                    case R.id.itemDelete:
+                                        presenter.deleteMessage(getAdapterPosition());
+                                        return true;
+                                    default:
+                                        return false;
+                                }
+                            }
+                        });
+
+                popupMenu.setOnDismissListener(new PopupMenu.OnDismissListener() {
+                    @Override
+                    public void onDismiss(PopupMenu menu) {
+                    }
+                });
+                popupMenu.show();
                 return true;
             });
         }
