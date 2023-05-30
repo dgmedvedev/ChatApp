@@ -1,4 +1,4 @@
-package com.demo.chatapp;
+package com.demo.chatapp.pojo;
 
 public class Message {
     private String author;
