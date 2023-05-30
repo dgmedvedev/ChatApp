@@ -129,47 +129,51 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
                 if (onMessageClickListener != null) {
                     onMessageClickListener.onMessageLongClick(view, getAdapterPosition());
                 }
-                PopupMenu popupMenu = new PopupMenu(itemView.getContext(), itemView);
-                popupMenu.inflate(R.menu.popupmenu);
-                popupMenu
-                        .setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                            @Override
-                            public boolean onMenuItemClick(MenuItem item) {
-                                switch (item.getItemId()) {
-                                    case R.id.itemShare:
-                                        Message message = messages.get(getAdapterPosition());
-                                        if (message != null) {
-                                            String imageUrl = message.getImageUrl();
-                                            String textOfMessage = message.getTextOfMessage();
-                                            String result;
-                                            if (imageUrl != null) {
-                                                result = imageUrl;
-                                            } else {
-                                                result = textOfMessage;
-                                            }
-                                            Intent intent = new Intent(Intent.ACTION_SEND);
-                                            intent.setType("text/plain");
-                                            intent.putExtra(Intent.EXTRA_TEXT, result);
-                                            context.startActivity(intent);
-                                            return true;
-                                        }
-                                    case R.id.itemDelete:
-                                        presenter.deleteMessage(getAdapterPosition());
-                                        return true;
-                                    default:
-                                        return false;
-                                }
-                            }
-                        });
-
-                popupMenu.setOnDismissListener(new PopupMenu.OnDismissListener() {
-                    @Override
-                    public void onDismiss(PopupMenu menu) {
-                    }
-                });
-                popupMenu.show();
+                createPopupMenu();
                 return true;
             });
+        }
+
+        private void createPopupMenu() {
+            PopupMenu popupMenu = new PopupMenu(itemView.getContext(), itemView);
+            popupMenu.inflate(R.menu.popupmenu);
+            popupMenu
+                    .setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            switch (item.getItemId()) {
+                                case R.id.itemShare:
+                                    Message message = messages.get(getAdapterPosition());
+                                    if (message != null) {
+                                        String imageUrl = message.getImageUrl();
+                                        String textOfMessage = message.getTextOfMessage();
+                                        String result;
+                                        if (imageUrl != null) {
+                                            result = imageUrl;
+                                        } else {
+                                            result = textOfMessage;
+                                        }
+                                        Intent intent = new Intent(Intent.ACTION_SEND);
+                                        intent.setType("text/plain");
+                                        intent.putExtra(Intent.EXTRA_TEXT, result);
+                                        context.startActivity(intent);
+                                        return true;
+                                    }
+                                case R.id.itemDelete:
+                                    presenter.deleteMessage(getAdapterPosition());
+                                    return true;
+                                default:
+                                    return false;
+                            }
+                        }
+                    });
+
+            popupMenu.setOnDismissListener(new PopupMenu.OnDismissListener() {
+                @Override
+                public void onDismiss(PopupMenu menu) {
+                }
+            });
+            popupMenu.show();
         }
     }
 }
