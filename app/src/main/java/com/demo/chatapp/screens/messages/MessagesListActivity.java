@@ -77,7 +77,7 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_list_message);
         presenter = new MessagesListPresenter(this, this);
         mAuth = FirebaseAuth.getInstance();
 

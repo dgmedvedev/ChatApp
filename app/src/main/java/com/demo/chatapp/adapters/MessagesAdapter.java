@@ -1,5 +1,7 @@
 package com.demo.chatapp.adapters;
 
+import android.app.Activity;
+import android.app.ActivityOptions;
 import android.content.Context;
 import android.content.Intent;
 import android.preference.PreferenceManager;
@@ -16,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.demo.chatapp.pojo.Message;
 import com.demo.chatapp.R;
+import com.demo.chatapp.screens.image.ImageActivity;
 import com.demo.chatapp.screens.messages.MessagesListPresenter;
 import com.squareup.picasso.Picasso;
 
@@ -33,9 +36,9 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     private MessagesListPresenter presenter;
 
     public interface OnMessageClickListener {
-        void onMessageClick(View view, int position);
+        void onMessageClick(int position);
 
-        void onMessageLongClick(View view, int position);
+        void onMessageLongClick(int position);
     }
 
     public MessagesAdapter(Context context, MessagesListPresenter presenter) {
@@ -122,12 +125,19 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
             imageViewImage = itemView.findViewById(R.id.imageViewImage);
             itemView.setOnClickListener(view -> {
                 if (onMessageClickListener != null) {
-                    onMessageClickListener.onMessageClick(view, getAdapterPosition());
+                    onMessageClickListener.onMessageClick(getAdapterPosition());
+                }
+                String uri = messages.get(getAdapterPosition()).getImageUrl();
+                if (uri != null && !uri.isEmpty()) {
+                    Intent intent = new Intent(context, ImageActivity.class);
+                    intent.putExtra("uriImage", uri);
+                    ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation((Activity) context, imageViewImage, "message");
+                    context.startActivity(intent, options.toBundle());
                 }
             });
             itemView.setOnLongClickListener(view -> {
                 if (onMessageClickListener != null) {
-                    onMessageClickListener.onMessageLongClick(view, getAdapterPosition());
+                    onMessageClickListener.onMessageLongClick(getAdapterPosition());
                 }
                 createPopupMenu();
                 return true;
