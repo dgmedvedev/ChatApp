@@ -15,6 +15,7 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.demo.chatapp.R;
 import com.demo.chatapp.adapters.MessagesAdapter;
 import com.demo.chatapp.pojo.Message;
 import com.firebase.ui.auth.AuthUI;
@@ -81,7 +82,7 @@ public class MessagesListPresenter {
         return false;
     }
 
-    public void listDisplay(RecyclerView recyclerView, MessagesAdapter adapter) {
+    public void displayList(RecyclerView recyclerView, MessagesAdapter adapter) {
         if (isAuth) {
             db.collection(COLLECTION_NAME).orderBy("date").addSnapshotListener(new EventListener<QuerySnapshot>() {
                 @Override
@@ -89,7 +90,7 @@ public class MessagesListPresenter {
                     if (value != null) {
                         List<Message> messages = value.toObjects(Message.class);
                         adapter.setMessages(messages);
-                        recyclerView.scrollToPosition(adapter.getItemCount() - 1);
+                        //recyclerView.scrollToPosition(adapter.getItemCount() - 1);
                     }
                 }
             });
@@ -120,15 +121,15 @@ public class MessagesListPresenter {
             // Successfully signed in
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if (user != null) {
-                VIEW.showToastMessage("Добро пожаловать " + user.getEmail());
+                VIEW.showToastMessage(CONTEXT.getString(R.string.welcome) + user.getEmail());
                 preferences.edit().putString("author", user.getEmail()).apply();
                 isAuth = true;
             }
         } else {
             if (response != null) {
-                VIEW.showToastMessage("Error: " + response.getError());
+                VIEW.showToastMessage(CONTEXT.getString(R.string.error) + response.getError());
             } else {
-                VIEW.showToastMessage("Авторизуйтесь");
+                VIEW.showToastMessage(CONTEXT.getString(R.string.autorization));
             }
         }
     }
@@ -158,14 +159,14 @@ public class MessagesListPresenter {
                                             sendMessage(null, downloadUri.toString());
                                         }
                                     } else {
-                                        VIEW.showToastMessage("Error getImageResult");
+                                        VIEW.showToastMessage(CONTEXT.getString(R.string.error_loading_image));
                                     }
                                 }
                             });
                 }
             }
         } else {
-            VIEW.showToastMessage("Изображение не выбрано");
+            VIEW.showToastMessage(CONTEXT.getString(R.string.image_not_selected));
         }
     }
 
@@ -188,7 +189,7 @@ public class MessagesListPresenter {
                     .addOnFailureListener(new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception e) {
-                            VIEW.showToastMessage("Сообщение не отправлено");
+                            VIEW.showToastMessage(CONTEXT.getString(R.string.message_not_sent));
                         }
                     });
         }
@@ -207,7 +208,7 @@ public class MessagesListPresenter {
                                 if (author != null && author.equals(thisAuthor)) {
                                     db.collection(COLLECTION_NAME).document(messageId).delete();
                                 } else {
-                                    VIEW.showToastMessage("Удаляйте только свои сообщения");
+                                    VIEW.showToastMessage(CONTEXT.getString(R.string.delete_only_your_message));
                                 }
                                 return;
                             }
@@ -231,7 +232,7 @@ public class MessagesListPresenter {
                 if (isAuth) {
                     deleteMessage(viewHolder.getAdapterPosition());
                 } else {
-                    VIEW.showToastMessage("Авторизуйтесь");
+                    VIEW.showToastMessage(CONTEXT.getString(R.string.autorization));
                 }
             }
         });

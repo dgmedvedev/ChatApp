@@ -33,12 +33,19 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     private List<Message> messages;
     private Context context;
     private OnMessageClickListener onMessageClickListener;
+    private OnReachEndListener onReachEndListener;
     private MessagesListPresenter presenter;
 
     public interface OnMessageClickListener {
         void onMessageClick(int position);
 
         void onMessageLongClick(int position);
+    }
+
+    public interface OnReachEndListener {
+        void onReachEnd();
+
+        void onReachNotEnd();
     }
 
     public MessagesAdapter(Context context, MessagesListPresenter presenter) {
@@ -55,6 +62,10 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
 
     public void setOnMessageClickListener(OnMessageClickListener onMessageClickListener) {
         this.onMessageClickListener = onMessageClickListener;
+    }
+
+    public void setOnReachEndListener(OnReachEndListener onReachEndListener) {
+        this.onReachEndListener = onReachEndListener;
     }
 
     public List<Message> getMessages() {
@@ -105,6 +116,13 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
             holder.textViewTextOfMessage.setVisibility(View.GONE);
             holder.imageViewImage.setVisibility(View.VISIBLE);
             Picasso.get().load(urlToImage).into(holder.imageViewImage);
+        }
+
+        if (onReachEndListener != null) {
+            onReachEndListener.onReachNotEnd();
+            if (position == getItemCount() - 1) {
+                onReachEndListener.onReachEnd();
+            }
         }
     }
 

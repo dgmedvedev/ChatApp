@@ -20,7 +20,7 @@
         android:layout_height="wrap_content"
         android:ems="10"
         android:gravity="start|top"
-        android:hint="Введите сообщение:"
+        android:hint="@string/write_message"
         android:inputType="textMultiLine"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/imageViewSendMessage"
@@ -43,4 +43,19 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/floatingActionButtonMessages"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:clickable="true"
+        android:contentDescription="@string/scroll_down"
+        app:backgroundTint="@color/design_default_color_surface"
+        app:layout_constraintTop_toTopOf="@+id/recyclerViewMessages"
+        app:layout_constraintEnd_toEndOf="@+id/recyclerViewMessages"
+        android:focusable="true"
+        android:visibility="invisible"
+        app:srcCompat="@android:drawable/arrow_down_float" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

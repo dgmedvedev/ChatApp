@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chat App</string>
+    <string name="sign_out">Выйти</string>
+    <string name="sign_in">Войти</string>
+    <string name="share">Поделиться</string>
+    <string name="delete">Удалить</string>
+    <string name="message_image">Сообщение-картинка</string>
+    <string name="scroll_down">Прокрутка вниз</string>
+    <string name="write_message">Напишите сообщение…</string>
+    <string name="network_error">Проверьте подключение к интернету</string>
+    <string name="autorization">Авторизуйтесь</string>
+    <string name="delete_only_your_message">Удаляйте только свои сообщения</string>
+    <string name="welcome">\"Добро пожаловать \"</string>
+    <string name="error">\"Ошибка: \"</string>
+    <string name="message_not_sent">Сообщение не отправлено</string>
+    <string name="image_not_selected">Изображение не выбрано</string>
+    <string name="error_loading_image">Ошибка при загрузке изображения</string>
+</resources>

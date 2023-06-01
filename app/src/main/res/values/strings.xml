@@ -1,8 +1,18 @@
 <resources>
     <string name="app_name">Chat App</string>
-    <string name="sign_out">Выйти</string>
-    <string name="sign_in">Войти</string>
-    <string name="share">Поделиться</string>
-    <string name="delete">Удалить</string>
-    <string name="message_image">Сообщение-картинка</string>
+    <string name="sign_out">Sign out</string>
+    <string name="sign_in">Sign in</string>
+    <string name="share">Share</string>
+    <string name="delete">Delete</string>
+    <string name="message_image">Message-image</string>
+    <string name="scroll_down">Scroll down</string>
+    <string name="write_message">Type a message…</string>
+    <string name="network_error">Check your internet connection</string>
+    <string name="autorization">You need to pass authorization</string>
+    <string name="delete_only_your_message">Delete only your messages</string>
+    <string name="welcome">\"Welcome \"</string>
+    <string name="error">\"Error: \"</string>
+    <string name="message_not_sent">The message was not sent</string>
+    <string name="image_not_selected">Image not selected</string>
+    <string name="error_loading_image">Error loading the image</string>
 </resources>

@@ -19,6 +19,7 @@ import android.widget.Toast;
 import com.demo.chatapp.R;
 import com.demo.chatapp.adapters.MessagesAdapter;
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class MessagesListActivity extends AppCompatActivity implements MessagesListView {
@@ -39,6 +40,7 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
     private RecyclerView recyclerViewMessages;
     private MessagesAdapter adapter;
     private EditText editTextMessage;
+    private FloatingActionButton floatingActionButtonMessages;
 
     private FirebaseAuth mAuth;
     private Toast toastMessage;
@@ -47,7 +49,7 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
     @Override
     protected void onResume() {
         super.onResume();
-        presenter.listDisplay(recyclerViewMessages, adapter);
+        presenter.displayList(recyclerViewMessages, adapter);
         if (optionsMenu != null) {
             onCreateOptionsMenu(optionsMenu);
         }
@@ -67,9 +69,13 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.itemSignOut || item.getItemId() == R.id.itemSignIn) {
-            mAuth.signOut();
-            signOut();
+        if (isNetworkConnected()) {
+            if (item.getItemId() == R.id.itemSignOut || item.getItemId() == R.id.itemSignIn) {
+                mAuth.signOut();
+                signOut();
+            }
+        } else {
+            showToastMessage(getString(R.string.network_error));
         }
         return super.onOptionsItemSelected(item);
     }
@@ -83,14 +89,20 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
 
         ImageView imageViewSendMessage = findViewById(R.id.imageViewSendMessage);
         ImageView imageViewAddImage = findViewById(R.id.imageViewAddImage);
+        floatingActionButtonMessages = findViewById(R.id.floatingActionButtonMessages);
         recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
         editTextMessage = findViewById(R.id.editTextMessage);
         adapter = new MessagesAdapter(this, presenter);
         recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
+        //presenter.displayList(recyclerViewMessages, adapter);
         recyclerViewMessages.setAdapter(adapter);
 
         if (!presenter.verificationAuth()) {
-            signOut();
+            if (isNetworkConnected()) {
+                signOut();
+            } else {
+                showToastMessage(getString(R.string.network_error));
+            }
         }
 
         presenter.swipe(recyclerViewMessages);
@@ -103,10 +115,10 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
                         presenter.sendMessage(textOfMessage, null);
                     }
                 } else {
-                    showToastMessage("Проверьте подключение к интернету");
+                    showToastMessage(getString(R.string.network_error));
                 }
             } else {
-                showToastMessage("Авторизуйтесь");
+                showToastMessage(getString(R.string.autorization));
             }
         });
 
@@ -118,11 +130,28 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
                     intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true); // контент только с локального хранилища
                     getImageLauncher.launch(intent);
                 } else {
-                    showToastMessage("Проверьте подключение к интернету");
+                    showToastMessage(getString(R.string.network_error));
                 }
             } else {
-                showToastMessage("Авторизуйтесь");
+                showToastMessage(getString(R.string.autorization));
             }
+        });
+
+        adapter.setOnReachEndListener(new MessagesAdapter.OnReachEndListener() {
+            @Override
+            public void onReachEnd() {
+                floatingActionButtonMessages.hide();
+            }
+
+            @Override
+            public void onReachNotEnd() {
+                floatingActionButtonMessages.show();
+            }
+        });
+
+        floatingActionButtonMessages.setOnClickListener(view -> {
+            scrollDownRecyclerView();
+            floatingActionButtonMessages.hide();
         });
     }
 
