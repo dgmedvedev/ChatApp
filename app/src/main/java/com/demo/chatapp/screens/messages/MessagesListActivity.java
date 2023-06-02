@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
@@ -49,7 +50,6 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
     @Override
     protected void onResume() {
         super.onResume();
-        presenter.displayList(recyclerViewMessages, adapter);
         if (optionsMenu != null) {
             onCreateOptionsMenu(optionsMenu);
         }
@@ -85,18 +85,8 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list_message);
         presenter = new MessagesListPresenter(this, this);
-        mAuth = FirebaseAuth.getInstance();
-
-        ImageView imageViewSendMessage = findViewById(R.id.imageViewSendMessage);
-        ImageView imageViewAddImage = findViewById(R.id.imageViewAddImage);
-        floatingActionButtonMessages = findViewById(R.id.floatingActionButtonMessages);
-        recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
-        editTextMessage = findViewById(R.id.editTextMessage);
         adapter = new MessagesAdapter(this, presenter);
-        recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
-        //presenter.displayList(recyclerViewMessages, adapter);
-        recyclerViewMessages.setAdapter(adapter);
-
+        mAuth = FirebaseAuth.getInstance();
         if (!presenter.verificationAuth()) {
             if (isNetworkConnected()) {
                 signOut();
@@ -104,6 +94,14 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
                 showToastMessage(getString(R.string.network_error));
             }
         }
+        ImageView imageViewSendMessage = findViewById(R.id.imageViewSendMessage);
+        ImageView imageViewAddImage = findViewById(R.id.imageViewAddImage);
+        floatingActionButtonMessages = findViewById(R.id.floatingActionButtonMessages);
+        recyclerViewMessages = findViewById(R.id.recyclerViewMessages);
+        editTextMessage = findViewById(R.id.editTextMessage);
+        recyclerViewMessages.setLayoutManager(new LinearLayoutManager(this));
+        presenter.displayList(recyclerViewMessages, adapter);
+        recyclerViewMessages.setAdapter(adapter);
 
         presenter.swipe(recyclerViewMessages);
 

@@ -189,6 +189,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
                                     }
                                 case R.id.itemDelete:
                                     presenter.deleteMessage(getAdapterPosition());
+                                    notifyDataSetChanged();
                                     return true;
                                 default:
                                     return false;

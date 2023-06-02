@@ -22,5 +22,9 @@ public class ImageActivity extends AppCompatActivity {
         if (uri != null && !uri.isEmpty()) {
             Picasso.get().load(uri).into(imageViewImage);
         }
+
+        imageViewImage.setOnClickListener(view -> {
+            onBackPressed();
+        });
     }
 }

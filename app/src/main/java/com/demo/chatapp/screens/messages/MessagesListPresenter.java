@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
@@ -90,7 +91,7 @@ public class MessagesListPresenter {
                     if (value != null) {
                         List<Message> messages = value.toObjects(Message.class);
                         adapter.setMessages(messages);
-                        //recyclerView.scrollToPosition(adapter.getItemCount() - 1);
+                        recyclerView.scrollToPosition(adapter.getItemCount() - 1);
                     }
                 }
             });
