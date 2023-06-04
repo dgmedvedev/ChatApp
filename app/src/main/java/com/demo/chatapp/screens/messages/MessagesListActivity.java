@@ -83,6 +83,7 @@ public class MessagesListActivity extends AppCompatActivity implements MessagesL
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.i("onCreate()_", "start");
         setContentView(R.layout.activity_list_message);
         presenter = new MessagesListPresenter(this, this);
         adapter = new MessagesAdapter(this, presenter);
